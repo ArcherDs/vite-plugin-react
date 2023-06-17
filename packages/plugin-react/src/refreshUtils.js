@@ -34,6 +34,46 @@ function registerExportsForReactRefresh(filename, moduleExports) {
   }
 }
 
+function compare(a, b, p, cache = {}) {
+  let typeA = typeof a
+  if (typeA !== typeof b) {
+    return false
+  }
+  if (typeA !== 'object') {
+    return String(a) === String(b)
+  }
+  if (p) {
+    let cacheArr = cache[p]
+    if (cacheArr) {
+      let index = null
+      if (
+        cacheArr.some((x, i) => {
+          if (x[0] === a || x[1] === b) {
+            index = i
+            return true
+          }
+          return false
+        })
+      ) {
+        if (cacheArr[index][0] === a && cacheArr[index][1] === b) {
+          return true
+        }
+        return false
+      }
+      cacheArr.push([a, b])
+    } else {
+      cache[p] = []
+    }
+  }
+  for (const property in a) {
+    let res = compare(a[property], b[property], property, cache)
+    if (res === false) {
+      return false
+    }
+  }
+  return true
+}
+
 function validateRefreshBoundaryAndEnqueueUpdate(prevExports, nextExports) {
   if (!predicateOnExport(prevExports, (key) => !!nextExports[key])) {
     return 'Could not Fast Refresh (export removed)'
@@ -46,7 +86,7 @@ function validateRefreshBoundaryAndEnqueueUpdate(prevExports, nextExports) {
       hasExports = true
       if (exports.isLikelyComponentType(value)) return true
       if (!prevExports[key]) return false
-      return prevExports[key] === nextExports[key]
+      return compare(prevExports[key], nextExports[key])
     },
   )
   if (hasExports && allExportsAreComponentsOrUnchanged) {
